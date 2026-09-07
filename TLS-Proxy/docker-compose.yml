@@ -1,0 +1,23 @@
+services:
+  nginx-terminate:
+    image: nginx:1.30.4@sha256:09cc2702709e6388d979d8030e3ab4eb1ceb699b2dced26d7543e872a822e823
+    volumes:
+      - ./data/nginx-terminate:/usr/conf.d:ro
+      - ./data/certs:/usr/certs:ro
+    restart: on-failure
+    ports:
+      - "443:443"
+      - "80:80"
+    command: 
+      - /bin/sh
+      - -c
+      - |
+        nginx -c /usr/conf.d/nginx.conf -g "daemon off;"
+
+
+
+  nginx-relay:
+    image: nginx:1.30.4@sha256:09cc2702709e6388d979d8030e3ab4eb1ceb699b2dced26d7543e872a822e823
+    restart: on-failure
+
+
