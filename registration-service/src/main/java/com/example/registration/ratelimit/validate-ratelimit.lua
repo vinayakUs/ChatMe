@@ -31,6 +31,7 @@ local lastUpdateTimeMillis
 
 if redis.call("EXISTS", bucketKey) == 1 then
     local premitsRemStr, lastUpdateTimeMillis = unpack(redis.call("HMGET", bucketKey, PERMITS_REMAINING_FIELD, TIME_FIELD))
+    
 end
 remaningCooldown = lastUpdateTimeMillis + minDelayMillis - currentTimeMillis
 
