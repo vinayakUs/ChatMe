@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: registration-service
+  
+  data:
+    redis:
+      host: recess-ferny-macrofresh-20843.db.redis.io
+      port: 13389
+      username: default
+      password: jUrhCWOIsQSFJwj9CO4ig3WWG4EkRbBh
+
+bigtable:
+  project-id: ${BIGTABLE_PROJECT_ID:chatme-local}
+  instance-id: ${BIGTABLE_INSTANCE_ID:chatme-local}
+  table-id: ${BIGTABLE_TABLE_ID:registration-sessions}
+  emulator:
+    enabled: ${BIGTABLE_EMULATOR_ENABLED:true}
+    host: ${BT_EMULATOR_HOST:localhost}
+    port: ${BT_EMULATOR_PORT:8086}

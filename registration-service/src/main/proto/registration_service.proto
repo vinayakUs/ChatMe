@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package com.example.registration.grpc;
+
+option java_multiple_files = true;
+
+
+service RegistrationService {
+    /**
+     * Create new registration session for the give set of phone number, mmc, mnc and ratelimiter key
+     */
+    rpc CreateSession(CreateRegistrationSessionRequest) returns (CreateRegistraionSessionResponse);
+}
+
+message CreateRegistrationSessionRequest{
+    uint64 e164 = 1;
+    string mmc = 2;
+    string mnc = 3;
+    bool account_exist_with_e164 = 4;
+}
+
+message CreateRegistraionSessionResponse{
+    oneof response{
+        RegistraionSessionMetadata session_meta = 1;
+        CreateRegistrationSessionError error =2;
+    }
+}
+
+message RegistraionSessionMetadata {
+    bytes session_id = 1;
+    uint64 e164 = 2;
+    bool verified = 8;
+    bool may_request_sms = 3;
+    uint64 next_sms_seconds = 4;
+    bool may_code_check = 5;
+    uint64 next_code_check_seconds = 6;
+    uint64 expiration_seconds = 7;
+}
+
+message CreateRegistrationSessionError{}

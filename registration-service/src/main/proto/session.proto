@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package com.example.registration.session;
+
+option java_multiple_files = true;
+
+
+message SessionMetadata {
+    string mmc = 1;
+    string mnc = 2;
+    bool account_exist_with_e164 = 3;
+}
+
+message RegistrationSession {
+  
+  
+  bytes id = 1; //unique indentifier of session
+  string phone_nummber = 2; //E.164 formatted phone number
+  
+  
+
+}
