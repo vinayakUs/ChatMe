@@ -30,10 +30,15 @@ local remaningCooldown
 local lastUpdateTimeMillis
 
 if redis.call("EXISTS", bucketKey) == 1 then
-    local premitsRemStr, lastUpdateTimeMillis = unpack(redis.call("HMGET", bucketKey, PERMITS_REMAINING_FIELD, TIME_FIELD))
-    
+    local premitsRemStr, lastUpdateTimeMillisStr = unpack(redis.call("HMGET", bucketKey, PERMITS_REMAINING_FIELD, TIME_FIELD))
+    permitsRemaning = tonumber(premitsRemStr)
+    lastUpdateTimeMillis = tonumber(lastUpdateTimeMillisStr)
+    remaningCooldown = lastUpdateTimeMillis + minDelayMillis - currentTimeMillis
+else
+    permitsRemaning = bucketSize
+    remaningCooldown = 0 
+    lastUpdateTimeMillis = currentTimeMillis
 end
-remaningCooldown = lastUpdateTimeMillis + minDelayMillis - currentTimeMillis
 
 -- eclapsed time
 local eclapsedMillis = currentTimeMillis - lastUpdateTimeMillis
