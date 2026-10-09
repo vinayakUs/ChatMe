@@ -58,7 +58,22 @@ if availablePermits >= requestedAmount and remaningCooldown <= 0 then
             -- added remaningCooldown in max
             -- key must be alive at least until cooldown ends, otherwise the next caller would get a fresh full bucket and skip the cooldown entirely.
             -- if (permitsUsed * permitRegenerationMillis) is 30s then key will expire without using remaningCooldown
-            local ttl = max(
+            local ttlMillis = math.max(
                 remaningCooldown,
                 math.ceil( permitsUsed * permitRegenerationMillis ) 
             )
+            redis.call("HSET", bucketKey, PERMITS_REMAINING_FIELD, permitsRemaning, TIME_FIELD, lastUpdateTimeMillis)
+            redis.call("PEXPIRE", bucketKey, ttlMillis)
+        else
+            redis.call("DEL", bucketKey)
+        end
+    end
+
+    return 0
+else
+
+    local permitRegenrationTime = math.ceil((requestedAmount - availablePermits) * permitRegenerationMillis)
+    -- return max of cooldowntime or permit regenerationtime
+    return math.max(permitRegenerationTime, remaningCooldown)
+
+end
