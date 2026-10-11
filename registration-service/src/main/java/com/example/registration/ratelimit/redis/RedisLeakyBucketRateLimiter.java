@@ -1,5 +1,9 @@
 package com.example.registration.ratelimit.redis;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -45,7 +49,7 @@ public abstract class RedisLeakyBucketRateLimiter<K> implements RateLimiter<K> {
         this.clock = clock;
         this.configuration = configuration;
 
-        script = RedisScript.of(new ClassPathResource("validate-ratelimit.lua"), Long.class);
+        script = loadScript();
     }
 
     @Override
@@ -87,4 +91,19 @@ public abstract class RedisLeakyBucketRateLimiter<K> implements RateLimiter<K> {
 
         return Duration.ofMillis(redisTemplate.execute(script, keys, (Object[]) arguments));
     }
+    private static RedisScript<Long> loadScript() {
+        try (InputStream in = RedisLeakyBucketRateLimiter.class
+                .getResourceAsStream("validate-ratelimit.lua")) {
+            if (in == null) {
+                throw new IllegalStateException(
+                        "Resource not found: validate-ratelimit.lua");
+            }
+            return RedisScript.of(
+                    new String(in.readAllBytes(), StandardCharsets.UTF_8),
+                    Long.class);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
 }

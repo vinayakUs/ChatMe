@@ -72,7 +72,7 @@ if availablePermits >= requestedAmount and remaningCooldown <= 0 then
     return 0
 else
 
-    local permitRegenrationTime = math.ceil((requestedAmount - availablePermits) * permitRegenerationMillis)
+    local permitRegenerationTime = math.ceil((requestedAmount - availablePermits) * permitRegenerationMillis)
     -- return max of cooldowntime or permit regenerationtime
     return math.max(permitRegenerationTime, remaningCooldown)
 
