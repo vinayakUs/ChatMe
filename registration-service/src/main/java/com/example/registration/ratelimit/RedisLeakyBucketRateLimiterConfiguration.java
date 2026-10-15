@@ -1,7 +1,6 @@
 package com.example.registration.ratelimit;
 
 import java.time.Duration;
-
 /**
  * RedisLeakyBucketRateLimiterConfiguration
  */

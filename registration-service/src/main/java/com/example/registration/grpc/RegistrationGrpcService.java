@@ -33,6 +33,7 @@ public class RegistrationGrpcService extends RegistrationServiceGrpc.Registratio
 
             RegistrationSession registrationSession = registrationService.createRegistrationSession(
                     e164,
+                    request.getRateLimitCollationKey(),
                     SessionMetadata.newBuilder()
                             .setMmc(request.getMmc())
                             .setMnc(request.getMnc())

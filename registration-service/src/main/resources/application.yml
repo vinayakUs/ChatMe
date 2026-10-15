@@ -17,3 +17,11 @@ bigtable:
     enabled: ${BIGTABLE_EMULATOR_ENABLED:true}
     host: ${BT_EMULATOR_HOST:localhost}
     port: ${BT_EMULATOR_PORT:8086}
+
+
+rate-limits:
+  leaky-bucket:
+    session-creation:
+      max-capacity: 10
+      permit-regeneration-period: 288m
+      min-delay: 1m
