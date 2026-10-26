@@ -1,10 +1,14 @@
 package com.example.registration.grpc;
 
+import java.time.Duration;
+
 import org.springframework.grpc.server.service.GrpcService;
 
+import com.example.registration.ratelimit.RateLimitExceededException;
 import com.example.registration.service.RegistrationService;
 import com.example.registration.session.RegistrationSession;
 import com.example.registration.session.SessionMetadata;
+import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber;
 import io.grpc.stub.StreamObserver;
@@ -43,7 +47,40 @@ public class RegistrationGrpcService extends RegistrationServiceGrpc.Registratio
             responseObserver.onNext(registrationService.buildRegistraionSessionResponse(registrationSession));
             responseObserver.onCompleted();
 
-        } catch (Exception e) {
+        }
+
+        catch (RateLimitExceededException ex) {
+
+            CreateRegistrationSessionError.Builder errorBuilder = CreateRegistrationSessionError.newBuilder()
+                    .setErrorType(
+                            CreateRegistrationSessionErrorType.CREATE_REGISTRATION_SESSION_ERROR_TYPE_RATE_LIMITED)
+                    .setMayRetry(ex.getRetryAfter().isPresent());
+
+            ex.getRetryAfter().ifPresent((Duration dur) -> {
+                errorBuilder.setRetryAfterSeconds(dur.getSeconds());
+            });
+
+            responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
+                    .setError(errorBuilder.build())
+                    .build());
+            responseObserver.onCompleted();
+
+        }
+
+        catch (NumberParseException ex) {
+            CreateRegistrationSessionError.Builder errorBuilder = CreateRegistrationSessionError.newBuilder()
+                    .setErrorType(
+                            CreateRegistrationSessionErrorType.CREATE_REGISTRATION_SESSION_ERROR_TYPE_ILLEGAL_PHONE_NUMBER)
+                    .setMayRetry(false);
+
+            responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
+                    .setError(errorBuilder.build())
+                    .build());
+            responseObserver.onCompleted();
+
+        }
+
+        catch (Exception e) {
             e.printStackTrace();
             responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
                     .setError(CreateRegistrationSessionError.newBuilder().build())

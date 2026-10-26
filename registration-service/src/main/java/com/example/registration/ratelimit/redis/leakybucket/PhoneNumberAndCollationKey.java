@@ -1,4 +1,4 @@
-package com.example.registration.ratelimit.redis;
+package com.example.registration.ratelimit.redis.leakybucket;
 
 import com.google.i18n.phonenumbers.Phonenumber;
 

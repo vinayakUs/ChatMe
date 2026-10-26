@@ -1,4 +1,4 @@
-package com.example.registration.ratelimit.redis;
+package com.example.registration.ratelimit.redis.leakybucket;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,14 +9,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 
 import com.example.registration.ratelimit.RateLimitExceededException;
 import com.example.registration.ratelimit.RateLimiter;
-import com.example.registration.ratelimit.RedisLeakyBucketRateLimiterConfiguration;
 
 /**
  * RedisLeakyBucketRateLimiter
@@ -41,10 +38,10 @@ public abstract class RedisLeakyBucketRateLimiter<K> implements RateLimiter<K> {
     private final StringRedisTemplate redisTemplate;
     private final Clock clock;
     private final RedisScript<Long> script;
-    private final RedisLeakyBucketRateLimiterConfiguration configuration;
+    private final LeakyBucketRateLimiterConfiguration configuration;
 
     public RedisLeakyBucketRateLimiter(
-            StringRedisTemplate redisTemplate, Clock clock, RedisLeakyBucketRateLimiterConfiguration configuration) {
+            StringRedisTemplate redisTemplate, Clock clock, LeakyBucketRateLimiterConfiguration configuration) {
         this.redisTemplate = redisTemplate;
         this.clock = clock;
         this.configuration = configuration;
@@ -82,9 +79,9 @@ public abstract class RedisLeakyBucketRateLimiter<K> implements RateLimiter<K> {
 
         List<String> keys = List.of(key);
         final String[] arguments = {
-            String.valueOf(configuration.maxCapacity()),
-            String.valueOf(configuration.permitRegenerationPeriod().toMillis()),
-            String.valueOf(configuration.minDelay().toMillis()),
+            String.valueOf(configuration.getMaxCapacity()),
+            String.valueOf(configuration.getPermitRegenerationPeriod().toMillis()),
+            String.valueOf(configuration.getMinDelay().toMillis()),
             String.valueOf(clock.instant().toEpochMilli()),
             String.valueOf(consumeToken)
         };

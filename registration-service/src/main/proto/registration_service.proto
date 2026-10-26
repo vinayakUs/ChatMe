@@ -38,4 +38,20 @@ message RegistraionSessionMetadata {
   uint64 expiration_seconds = 7;
 }
 
-message CreateRegistrationSessionError {}
+message CreateRegistrationSessionError {
+  CreateRegistrationSessionErrorType error_type = 1;
+  bool may_retry = 2;
+  uint64 retry_after_seconds = 3;
+}
+
+enum CreateRegistrationSessionErrorType {
+  CREATE_REGISTRATION_SESSION_ERROR_TYPE_UNSPECIFIED = 0;
+  CREATE_REGISTRATION_SESSION_ERROR_TYPE_RATE_LIMITED = 1;
+  CREATE_REGISTRATION_SESSION_ERROR_TYPE_ILLEGAL_PHONE_NUMBER = 2;
+}
+
+enum MessageTransport {
+  MESSAGE_TRANSPORT_UNSPECIFIED = 0;
+  MESSAGE_TRANSPORT_SMS = 1;
+  MESSAGE_TRANSPORT_VOICE = 2;
+}

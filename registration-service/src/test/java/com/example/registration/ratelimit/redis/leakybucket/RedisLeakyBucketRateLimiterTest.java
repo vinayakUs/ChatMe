@@ -1,4 +1,4 @@
-package com.example.registration.ratelimit.redis;
+package com.example.registration.ratelimit.redis.leakybucket;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -26,7 +26,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.example.registration.ratelimit.RateLimitExceededException;
-import com.example.registration.ratelimit.RedisLeakyBucketRateLimiterConfiguration;
 
 @Testcontainers
 @DataRedisTest
@@ -48,14 +47,24 @@ class RedisLeakyBucketRateLimiterTest {
     private static final Duration PERMIT_REGENERATION_PERIOD = Duration.ofMinutes(1);
     private static final Duration MIN_DELAY = Duration.ofSeconds(5);
 
+    private static final LeakyBucketRateLimiterConfiguration s = createConfiguration();
+
+    private static LeakyBucketRateLimiterConfiguration createConfiguration() {
+        LeakyBucketRateLimiterConfiguration config = new LeakyBucketRateLimiterConfiguration();
+        config.setMaxCapacity(MAX_PERMITS);
+        config.setMinDelay(MIN_DELAY);
+        config.setName("test");
+        config.setPermitRegenerationPeriod(PERMIT_REGENERATION_PERIOD);
+        return config;
+    }
+
     // Small concrete subclass, because the real class is abstract
     private static class TestRateLimiter extends RedisLeakyBucketRateLimiter<String> {
         private final boolean failOpen;
 
         TestRateLimiter(StringRedisTemplate template, Clock clock, boolean failOpen) {
-            super(template, clock,
-                    new RedisLeakyBucketRateLimiterConfiguration(
-                            "test", MAX_PERMITS, PERMIT_REGENERATION_PERIOD, MIN_DELAY));
+
+            super(template, clock, s);
             this.failOpen = failOpen;
         }
 
@@ -106,21 +115,23 @@ class RedisLeakyBucketRateLimiterTest {
     @Test
     void testGetNextActionTime() {
 
-    assertEquals(CURRENT_TIME, rateLimiter.getNextActionTime("test").orElseThrow(),"Action time for fresh bucket should be immediate");
+        assertEquals(CURRENT_TIME, rateLimiter.getNextActionTime("test").orElseThrow(),
+                "Action time for fresh bucket should be immediate");
 
-    assertDoesNotThrow(()->rateLimiter.checkRateLimit("test"));
+        assertDoesNotThrow(() -> rateLimiter.checkRateLimit("test"));
 
-    assertEquals(Optional.of(CURRENT_TIME.plus(MIN_DELAY)), rateLimiter.getNextActionTime("test"),"action for just used bucket should be permitted to used after cooldown");
+        assertEquals(Optional.of(CURRENT_TIME.plus(MIN_DELAY)), rateLimiter.getNextActionTime("test"),
+                "action for just used bucket should be permitted to used after cooldown");
 
-    when(clock.instant()).thenReturn(CURRENT_TIME.plus(MIN_DELAY));
-    assertEquals(Optional.of(CURRENT_TIME.plus(MIN_DELAY)), rateLimiter.getNextActionTime("test"));
-    //Consume the second permit
-    assertDoesNotThrow(() -> rateLimiter.checkRateLimit("test"));
+        when(clock.instant()).thenReturn(CURRENT_TIME.plus(MIN_DELAY));
+        assertEquals(Optional.of(CURRENT_TIME.plus(MIN_DELAY)), rateLimiter.getNextActionTime("test"));
+        // Consume the second permit
+        assertDoesNotThrow(() -> rateLimiter.checkRateLimit("test"));
 
-    final Long eps = Math.abs(rateLimiter.getNextActionTime("test").orElseThrow().toEpochMilli() - CURRENT_TIME.plus(PERMIT_REGENERATION_PERIOD).toEpochMilli());
+        final Long eps = Math.abs(rateLimiter.getNextActionTime("test").orElseThrow().toEpochMilli()
+                - CURRENT_TIME.plus(PERMIT_REGENERATION_PERIOD).toEpochMilli());
 
-    assertTrue(eps <= 1);
-
+        assertTrue(eps <= 1);
 
     }
 

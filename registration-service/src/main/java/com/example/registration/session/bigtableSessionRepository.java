@@ -1,6 +1,7 @@
 package com.example.registration.session;
 
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
@@ -26,6 +27,7 @@ import com.google.protobuf.ByteString;
 public class bigtableSessionRepository implements SessionRepository {
 
     private final BigtableDataClient bigtableDataClient;
+    private final Clock clock;
 
     private static final @Nonnull ByteString DATA_COLUMN_NAME = Objects.requireNonNull(ByteString.copyFromUtf8("D"));
 
@@ -35,8 +37,9 @@ public class bigtableSessionRepository implements SessionRepository {
     private final String columnFamilyName = "S";
     TableId tableId = TableId.of("registration-sessions");
 
-    public bigtableSessionRepository(BigtableDataClient bigtableDataClient) {
+    public bigtableSessionRepository(BigtableDataClient bigtableDataClient, Clock clock) {
         this.bigtableDataClient = bigtableDataClient;
+        this.clock = clock;
     }
 
     @Override
@@ -47,6 +50,9 @@ public class bigtableSessionRepository implements SessionRepository {
         RegistrationSession registrationSession = RegistrationSession.newBuilder()
                 .setId(UuidUtils.uuidToByteString(sessionId))
                 .setPhoneNummber(PhoneNumberUtil.getInstance().format(e164, PhoneNumberFormat.E164))
+                .setSessionMetadata(sessionMetadata)
+                .setExpirationEpochMillis(expiration.toEpochMilli())
+                .setCreatedEpochMillis(clock.instant().toEpochMilli())
                 .build();
 
         ByteString expirationByteString = Objects.requireNonNull(ByteString.copyFrom(ByteBuffer.allocate(Long.BYTES)

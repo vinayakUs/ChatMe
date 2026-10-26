@@ -1,6 +1,7 @@
 package com.example.registration.ratelimit;
 
 import java.time.Duration;
+import java.util.Optional;
 
 /**
  * RateLimitExceededException
@@ -22,7 +23,7 @@ public class RateLimitExceededException extends Exception {
     /**
      * @return how long the caller must wait before retrying, or {@code null} if unknown
      */
-    public Duration getRetryAfter() {
-        return retryAfter;
+    public Optional<Duration> getRetryAfter() {
+        return Optional.ofNullable(retryAfter);
     }
 }

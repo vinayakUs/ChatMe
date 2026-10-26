@@ -3,20 +3,46 @@ syntax = "proto3";
 package com.example.registration.session;
 
 option java_multiple_files = true;
-
+import "registration_service.proto";
 
 message SessionMetadata {
-    string mmc = 1;
-    string mnc = 2;
-    bool account_exist_with_e164 = 3;
+  string mmc = 1;
+  string mnc = 2;
+  bool account_exist_with_e164 = 3;
 }
 
 message RegistrationSession {
-  
-  
+
   bytes id = 1; //unique indentifier of session
   string phone_nummber = 2; //E.164 formatted phone number
-  
-  
+  string verified_code = 3;
+  repeated RegistrationAttempt registration_attempts = 4;
+  SessionMetadata session_metadata = 5;
+  uint64 last_check_code_attempt_epoch_millis = 8; //last attempted verification code for the active registration attempt
+  uint64 expiration_epoch_millis = 6;
+  uint64 created_epoch_millis = 7;
+  repeated com.example.registration.grpc.MessageTransport rejected_transport = 9;
+  repeated FailedSendAttempt failed_attempt = 10;
+  uint32 check_code_attempts = 11;
 
+}
+
+message RegistrationAttempt {
+  uint64 timestamp_epoch_millis = 1; //UNIX timestamp (in milliseconds) when this attempt was created
+  string sender_name = 2;
+  uint64 expiration_epoch_millis = 5; //UNIX timestamp (in milliseconds) at which this attempt will no longer valid
+  com.example.registration.grpc.MessageTransport message_transport = 3;
+}
+
+message FailedSendAttempt {
+  com.example.registration.grpc.MessageTransport message_transport = 3;
+  uint64 timestamp_epoch_millis = 1;
+    FailedSendReason failed_send_reason = 5;
+}
+
+enum FailedSendReason {
+  FAILED_SEND_REASON_UNSPECIFIED =0;
+  FAILED_SEND_REASON_SUSPECTED_FRAUD = 1; // The attempt was not sent due to suspected fraud
+  FAILED_SEND_REASON_UNAVAILABLE = 2; // sender could not be reached or had an unexpected error
+  FAILED_SEND_REASON_REJECTED = 3; //The attempt was refused by the sender
 }
