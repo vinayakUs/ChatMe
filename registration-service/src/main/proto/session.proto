@@ -32,12 +32,15 @@ message RegistrationAttempt {
   string sender_name = 2;
   uint64 expiration_epoch_millis = 5; //UNIX timestamp (in milliseconds) at which this attempt will no longer valid
   com.example.registration.grpc.MessageTransport message_transport = 3;
+  com.example.registration.grpc.ClientType client_type = 4;
+
 }
 
 message FailedSendAttempt {
   com.example.registration.grpc.MessageTransport message_transport = 3;
   uint64 timestamp_epoch_millis = 1;
-    FailedSendReason failed_send_reason = 5;
+  FailedSendReason failed_send_reason = 5;
+  com.example.registration.grpc.ClientType client_type = 4;
 }
 
 enum FailedSendReason {

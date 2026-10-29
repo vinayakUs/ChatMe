@@ -6,3 +6,6 @@ cbt -project chatme-local -instance chatme-local \
     createtable registration-sessions "families=S"
     
 cbt -project chatme-local -instance chatme-local ls
+
+
+grpcurl -plaintext -d "{\"e164\":14155552671}" localhost:9090 com.example.registration.grpc.RegistrationService/CreateSession

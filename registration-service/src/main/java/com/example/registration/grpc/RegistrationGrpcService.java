@@ -19,73 +19,85 @@ import io.grpc.stub.StreamObserver;
 @GrpcService
 public class RegistrationGrpcService extends RegistrationServiceGrpc.RegistrationServiceImplBase {
 
-    private static final PhoneNumberUtil PHONE_UTIL = PhoneNumberUtil.getInstance();
+	private static final PhoneNumberUtil PHONE_UTIL = PhoneNumberUtil.getInstance();
 
-    private final RegistrationService registrationService;
+	private final RegistrationService registrationService;
 
-    public RegistrationGrpcService(RegistrationService registrationService) {
-        this.registrationService = registrationService;
-    }
+	public RegistrationGrpcService(RegistrationService registrationService) {
+		this.registrationService = registrationService;
+	}
 
-    @Override
-    public void createSession(
-            CreateRegistrationSessionRequest request,
-            StreamObserver<CreateRegistraionSessionResponse> responseObserver) {
+	@Override
+	public void createSession(
+			CreateRegistrationSessionRequest request,
+			StreamObserver<CreateRegistraionSessionResponse> responseObserver) {
 
-        try {
-            Phonenumber.PhoneNumber e164 = PHONE_UTIL.parse("+" + request.getE164(), null);
+		try {
+			Phonenumber.PhoneNumber e164 = PHONE_UTIL.parse("+" + request.getE164(), null);
 
-            RegistrationSession registrationSession = registrationService.createRegistrationSession(
-                    e164,
-                    request.getRateLimitCollationKey(),
-                    SessionMetadata.newBuilder()
-                            .setMmc(request.getMmc())
-                            .setMnc(request.getMnc())
-                            .setAccountExistWithE164(request.getAccountExistWithE164())
-                            .build());
+			RegistrationSession registrationSession = registrationService.createRegistrationSession(
+					e164,
+					request.getRateLimitCollationKey(),
+					SessionMetadata.newBuilder()
+							.setMmc(request.getMmc())
+							.setMnc(request.getMnc())
+							.setAccountExistWithE164(request.getAccountExistWithE164())
+							.build());
 
-            responseObserver.onNext(registrationService.buildRegistraionSessionResponse(registrationSession));
-            responseObserver.onCompleted();
+			responseObserver.onNext(
+					registrationService.buildRegistraionSessionResponse(registrationSession));
+			responseObserver.onCompleted();
 
-        }
+		}
 
-        catch (RateLimitExceededException ex) {
+		catch (RateLimitExceededException ex) {
 
-            CreateRegistrationSessionError.Builder errorBuilder = CreateRegistrationSessionError.newBuilder()
-                    .setErrorType(
-                            CreateRegistrationSessionErrorType.CREATE_REGISTRATION_SESSION_ERROR_TYPE_RATE_LIMITED)
-                    .setMayRetry(ex.getRetryAfter().isPresent());
+			CreateRegistrationSessionError.Builder errorBuilder = CreateRegistrationSessionError
+					.newBuilder()
+					.setErrorType(
+							CreateRegistrationSessionErrorType.CREATE_REGISTRATION_SESSION_ERROR_TYPE_RATE_LIMITED)
+					.setMayRetry(ex.getRetryAfter().isPresent());
 
-            ex.getRetryAfter().ifPresent((Duration dur) -> {
-                errorBuilder.setRetryAfterSeconds(dur.getSeconds());
-            });
+			ex.getRetryAfter().ifPresent((Duration dur) -> {
+				errorBuilder.setRetryAfterSeconds(dur.getSeconds());
+			});
 
-            responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
-                    .setError(errorBuilder.build())
-                    .build());
-            responseObserver.onCompleted();
+			responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
+					.setError(errorBuilder.build())
+					.build());
+			responseObserver.onCompleted();
 
-        }
+		}
 
-        catch (NumberParseException ex) {
-            CreateRegistrationSessionError.Builder errorBuilder = CreateRegistrationSessionError.newBuilder()
-                    .setErrorType(
-                            CreateRegistrationSessionErrorType.CREATE_REGISTRATION_SESSION_ERROR_TYPE_ILLEGAL_PHONE_NUMBER)
-                    .setMayRetry(false);
+		catch (NumberParseException ex) {
+			CreateRegistrationSessionError.Builder errorBuilder = CreateRegistrationSessionError
+					.newBuilder()
+					.setErrorType(
+							CreateRegistrationSessionErrorType.CREATE_REGISTRATION_SESSION_ERROR_TYPE_ILLEGAL_PHONE_NUMBER)
+					.setMayRetry(false);
 
-            responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
-                    .setError(errorBuilder.build())
-                    .build());
-            responseObserver.onCompleted();
+			responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
+					.setError(errorBuilder.build())
+					.build());
+			responseObserver.onCompleted();
 
-        }
+		}
 
-        catch (Exception e) {
-            e.printStackTrace();
-            responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
-                    .setError(CreateRegistrationSessionError.newBuilder().build())
-                    .build());
-            responseObserver.onCompleted();
-        }
-    }
+		catch (Exception e) {
+			e.printStackTrace();
+			responseObserver.onNext(CreateRegistraionSessionResponse.newBuilder()
+					.setError(CreateRegistrationSessionError.newBuilder().build())
+					.build());
+			responseObserver.onCompleted();
+		}
+	}
+
+
+	@Override 
+	public void sendVerificationCode(
+		SendVerificationCodeRequest request,
+		StreamObserver<SendVerficationCodeResponse> responseObserver
+	){
+		
+	}
 }

@@ -10,6 +10,8 @@ service RegistrationService {
      * Create new registration session for the give set of phone number, mmc, mnc and ratelimiter key
      */
   rpc CreateSession(CreateRegistrationSessionRequest) returns (CreateRegistraionSessionResponse);
+
+  rpc SendVerificationCode(SendVerificationCodeRequest) returns (SendVerficationCodeResponse);
 }
 
 message CreateRegistrationSessionRequest {
@@ -26,6 +28,10 @@ message CreateRegistraionSessionResponse {
     CreateRegistrationSessionError error = 2;
   }
 }
+
+message SendVerificationCodeRequest {}
+
+message SendVerficationCodeResponse {}
 
 message RegistraionSessionMetadata {
   bytes session_id = 1;
@@ -54,4 +60,11 @@ enum MessageTransport {
   MESSAGE_TRANSPORT_UNSPECIFIED = 0;
   MESSAGE_TRANSPORT_SMS = 1;
   MESSAGE_TRANSPORT_VOICE = 2;
+}
+
+enum ClientType {
+  CLIENT_TYPE_IOS = 0;
+  CLIENT_TYPE_ANDROID_WITH_FCM = 1;
+  CLIENT_TYPE_ANDROID_WITHOUT_FCM = 2;
+  CLIENT_TYPE_UNSPECIFIED = 3;
 }

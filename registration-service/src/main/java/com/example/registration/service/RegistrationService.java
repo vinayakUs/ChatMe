@@ -27,131 +27,132 @@ import com.google.i18n.phonenumbers.Phonenumber;
 @Service
 public class RegistrationService {
 
-    private final SessionRepository bigTableRepository;
-    private final Clock clock;
-    private static Duration SESSION_TTL_AFTER_LAST_ACTION = Duration.ofMinutes(10);
+	private final SessionRepository bigTableRepository;
+	private final Clock clock;
+	private static Duration SESSION_TTL_AFTER_LAST_ACTION = Duration.ofMinutes(10);
 
-    private final RateLimiter<PhoneNumberAndCollationKey> sessionCreationRateLimiter;
-    private final RateLimiter<RegistrationSession> sendSmsVerificationCodePerSessionRateLimiter;
-    private final RateLimiter<RegistrationSession> checkVerificationCodePerSessionRateLimiter;
+	private final RateLimiter<PhoneNumberAndCollationKey> sessionCreationRateLimiter;
+	private final RateLimiter<RegistrationSession> sendSmsVerificationCodePerSessionRateLimiter;
+	private final RateLimiter<RegistrationSession> checkVerificationCodePerSessionRateLimiter;
 
-    /**
-     * NextActionItemTimes
-     */
-    record NextActionItemTimes(
-            Optional<Instant> nextSms,
-            Optional<Instant> nextCodeCheck) {
-        static NextActionItemTimes EMPTY = new NextActionItemTimes(Optional.empty(), Optional.empty());
-    }
+	/**
+	 * NextActionItemTimes
+	 */
+	record NextActionItemTimes(
+			Optional<Instant> nextSms,
+			Optional<Instant> nextCodeCheck) {
+		static NextActionItemTimes EMPTY = new NextActionItemTimes(Optional.empty(), Optional.empty());
+	}
 
-    public RegistrationService(SessionRepository bigTableRepository, Clock clock,
-            @Qualifier("session-creation") RateLimiter<PhoneNumberAndCollationKey> sessionCreationRateLimiter,
-            @Qualifier("send-sms-verification-code-per-session") RateLimiter<RegistrationSession> sendSmsVerificationCodePerSessionRateLimiter,
-            @Qualifier("check-verification-code-per-session") RateLimiter<RegistrationSession> checkVerificationCodePerSessionRateLimiter
+	public RegistrationService(SessionRepository bigTableRepository, Clock clock,
+			@Qualifier("session-creation") RateLimiter<PhoneNumberAndCollationKey> sessionCreationRateLimiter,
+			@Qualifier("send-sms-verification-code-per-session") RateLimiter<RegistrationSession> sendSmsVerificationCodePerSessionRateLimiter,
+			@Qualifier("check-verification-code-per-session") RateLimiter<RegistrationSession> checkVerificationCodePerSessionRateLimiter
 
-    ) {
-        this.bigTableRepository = bigTableRepository;
-        this.clock = clock;
-        this.sessionCreationRateLimiter = sessionCreationRateLimiter;
-        this.sendSmsVerificationCodePerSessionRateLimiter = sendSmsVerificationCodePerSessionRateLimiter;
-        this.checkVerificationCodePerSessionRateLimiter = checkVerificationCodePerSessionRateLimiter;
-    }
+	) {
+		this.bigTableRepository = bigTableRepository;
+		this.clock = clock;
+		this.sessionCreationRateLimiter = sessionCreationRateLimiter;
+		this.sendSmsVerificationCodePerSessionRateLimiter = sendSmsVerificationCodePerSessionRateLimiter;
+		this.checkVerificationCodePerSessionRateLimiter = checkVerificationCodePerSessionRateLimiter;
+	}
 
-    public RegistrationSession createRegistrationSession(
-            final Phonenumber.PhoneNumber e164,
-            final String rateLimitCollationKey,
-            SessionMetadata sessionMetadata) throws RateLimitExceededException {
+	public RegistrationSession createRegistrationSession(
+			final Phonenumber.PhoneNumber e164,
+			final String rateLimitCollationKey,
+			SessionMetadata sessionMetadata) throws RateLimitExceededException {
 
-        sessionCreationRateLimiter.checkRateLimit(new PhoneNumberAndCollationKey(e164, rateLimitCollationKey));
+		sessionCreationRateLimiter.checkRateLimit(new PhoneNumberAndCollationKey(e164, rateLimitCollationKey));
 
-        return bigTableRepository.createSession(
-                e164, sessionMetadata, clock.instant().plus(SESSION_TTL_AFTER_LAST_ACTION));
-    }
+		return bigTableRepository.createSession(
+				e164, sessionMetadata, clock.instant().plus(SESSION_TTL_AFTER_LAST_ACTION));
+	}
 
-    public CreateRegistraionSessionResponse buildRegistraionSessionResponse(RegistrationSession registrationSession) {
 
-        /**
-         * --bytes session_id = 1;
-         * --uint64 e164 = 2;
-         * --bool verified = 8;
-         * bool may_request_sms = 3;
-         * uint64 next_sms_seconds = 4;
-         * bool may_code_check = 5;
-         * uint64 next_code_check_seconds = 6;
-         * --uint64 expiration_seconds = 7;
-         */
+	public CreateRegistraionSessionResponse buildRegistraionSessionResponse(RegistrationSession registrationSession) {
 
-        RegistraionSessionMetadata.Builder sessionMetadata = RegistraionSessionMetadata.newBuilder();
+		/**
+		 * --bytes session_id = 1;
+		 * --uint64 e164 = 2;
+		 * --bool verified = 8;
+		 * bool may_request_sms = 3;
+		 * uint64 next_sms_seconds = 4;
+		 * bool may_code_check = 5;
+		 * uint64 next_code_check_seconds = 6;
+		 * --uint64 expiration_seconds = 7;
+		 */
 
-        sessionMetadata.setSessionId(registrationSession.getId());
-        sessionMetadata
-                .setE164(Long.parseLong(StringUtils.trimLeadingCharacter(registrationSession.getPhoneNummber(), '+')));
-        sessionMetadata.setVerified(StringUtils.hasText(registrationSession.getVerifiedCode()));
+		RegistraionSessionMetadata.Builder sessionMetadata = RegistraionSessionMetadata.newBuilder();
 
-        sessionMetadata.setExpirationSeconds(
-                Duration.between(clock.instant(), getSessionExpiration(registrationSession)).getSeconds());
+		sessionMetadata.setSessionId(registrationSession.getId());
+		sessionMetadata
+				.setE164(Long.parseLong(StringUtils.trimLeadingCharacter(registrationSession.getPhoneNummber(), '+')));
+		sessionMetadata.setVerified(StringUtils.hasText(registrationSession.getVerifiedCode()));
 
-        final NextActionItemTimes itemTimes = getNextActionItemsTime(registrationSession);
-        final Instant currentTime = clock.instant();
+		sessionMetadata.setExpirationSeconds(
+				Duration.between(clock.instant(), getSessionExpiration(registrationSession)).getSeconds());
 
-        itemTimes.nextSms.ifPresent(
-                nextAction -> {
-                    sessionMetadata.setMayRequestSms(true);
-                    sessionMetadata.setNextSmsSeconds(
-                            nextAction.isBefore(currentTime) ? 0
-                                    : Duration.between(currentTime, nextAction).toSeconds());
-                });
+		final NextActionItemTimes itemTimes = getNextActionItemsTime(registrationSession);
+		final Instant currentTime = clock.instant();
 
-        itemTimes.nextCodeCheck.ifPresent(
-                nextAction -> {
-                    sessionMetadata.setMayCodeCheck(true);
-                    sessionMetadata.setNextCodeCheckSeconds(
-                            nextAction.isBefore(currentTime) ? 0
-                                    : Duration.between(currentTime, nextAction).toSeconds());
-                });
+		itemTimes.nextSms.ifPresent(
+				nextAction -> {
+					sessionMetadata.setMayRequestSms(true);
+					sessionMetadata.setNextSmsSeconds(
+							nextAction.isBefore(currentTime) ? 0
+									: Duration.between(currentTime, nextAction).toSeconds());
+				});
 
-        return CreateRegistraionSessionResponse.newBuilder()
-                .setSessionMeta(sessionMetadata.build())
-                .build();
-    }
+		itemTimes.nextCodeCheck.ifPresent(
+				nextAction -> {
+					sessionMetadata.setMayCodeCheck(true);
+					sessionMetadata.setNextCodeCheckSeconds(
+							nextAction.isBefore(currentTime) ? 0
+									: Duration.between(currentTime, nextAction).toSeconds());
+				});
 
-    public NextActionItemTimes getNextActionItemsTime(final RegistrationSession session) {
+		return CreateRegistraionSessionResponse.newBuilder()
+				.setSessionMeta(sessionMetadata.build())
+				.build();
+	}
 
-        if (StringUtils.hasText(session.getVerifiedCode())) {
-            return NextActionItemTimes.EMPTY;
-        }
+	public NextActionItemTimes getNextActionItemsTime(final RegistrationSession session) {
 
-        final Optional<Instant> nextSms = sendSmsVerificationCodePerSessionRateLimiter.getNextActionTime(session);
+		if (StringUtils.hasText(session.getVerifiedCode())) {
+			return NextActionItemTimes.EMPTY;
+		}
 
-        Optional<Instant> nextCodeCheck = Optional.empty();
-        // caller can check code if there's active attempt
+		final Optional<Instant> nextSms = sendSmsVerificationCodePerSessionRateLimiter.getNextActionTime(session);
 
-        if (session.getRegistrationAttemptsCount() > 0) {
-            Instant currentAttemptExpiration = Instant.ofEpochMilli(session
-                    .getRegistrationAttempts(session.getRegistrationAttemptsCount() - 1).getExpirationEpochMillis());
+		Optional<Instant> nextCodeCheck = Optional.empty();
+		// caller can check code if there's active attempt
 
-            if (!clock.instant().isAfter(currentAttemptExpiration)) {
-                nextCodeCheck = checkVerificationCodePerSessionRateLimiter.getNextActionTime(session);
-            }
+		if (session.getRegistrationAttemptsCount() > 0) {
+			Instant currentAttemptExpiration = Instant.ofEpochMilli(session
+					.getRegistrationAttempts(session.getRegistrationAttemptsCount() - 1).getExpirationEpochMillis());
 
-        }
+			if (!clock.instant().isAfter(currentAttemptExpiration)) {
+				nextCodeCheck = checkVerificationCodePerSessionRateLimiter.getNextActionTime(session);
+			}
 
-        return new NextActionItemTimes(nextSms, nextCodeCheck);
-    }
+		}
 
-    Instant getSessionExpiration(RegistrationSession session) {
+		return new NextActionItemTimes(nextSms, nextCodeCheck);
+	}
 
-        if (StringUtils.hasText(session.getVerifiedCode())) {
-            return Instant.ofEpochMilli(session.getLastCheckCodeAttemptEpochMillis())
-                    .plus(SESSION_TTL_AFTER_LAST_ACTION);
-        }
+	Instant getSessionExpiration(RegistrationSession session) {
 
-        final List<Instant> candinateExpiration = session.getRegistrationAttemptsList().stream().map(
-                attempt -> {
-                    return Instant.ofEpochMilli(attempt.getExpirationEpochMillis());
-                }).toList();
+		if (StringUtils.hasText(session.getVerifiedCode())) {
+			return Instant.ofEpochMilli(session.getLastCheckCodeAttemptEpochMillis())
+					.plus(SESSION_TTL_AFTER_LAST_ACTION);
+		}
 
-        return candinateExpiration.stream().max(Comparator.naturalOrder())
-                .orElse(Instant.ofEpochMilli(session.getExpirationEpochMillis()));
-    }
+		final List<Instant> candinateExpiration = session.getRegistrationAttemptsList().stream().map(
+				attempt -> {
+					return Instant.ofEpochMilli(attempt.getExpirationEpochMillis());
+				}).toList();
+
+		return candinateExpiration.stream().max(Comparator.naturalOrder())
+				.orElse(Instant.ofEpochMilli(session.getExpirationEpochMillis()));
+	}
 }
